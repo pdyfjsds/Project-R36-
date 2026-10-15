@@ -11,34 +11,113 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install 7zip
+      - name: Install Required Packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y p7zip-full
+          sudo apt-get install -y \
+            p7zip-full \
+            gh \
+            wget \
+            curl
+
+      - name: Download arkos4clone Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir releasefiles
+
+          gh release download 20261008 \
+            --repo lcdyk0517/arkos4clone \
+            --dir releasefiles
+
+      - name: Display Downloaded Files
+        run: |
+          echo "Downloaded files:"
+          find releasefiles -type f
+
+      - name: Verify Parts Exist
+        run: |
+          cd releasefiles
+
+          shopt -s nullglob
+
+          PARTS=( *.001 )
+
+          if [ ${#PARTS[@]} -eq 0 ]; then
+            echo "ERROR: No .001 files found."
+            exit 1
+          fi
+
+          echo "Found ${#PARTS[@]} part files"
 
       - name: Join Parts
         run: |
-          cat firmware.img.7z.* > firmware.img.7z
+          cd releasefiles
 
-      - name: Extract Image
+          FIRST=$(ls *.001 | head -n1)
+          BASE=${FIRST%.001}
+
+          echo "Joining parts for $BASE"
+
+          cat "${BASE}.001" \
+              "${BASE}.002" \
+              "${BASE}.003" \
+              > "${BASE}"
+
+          ls -lh
+
+      - name: Verify Combined Archive
         run: |
-          7z x firmware.img.7z
+          cd releasefiles
 
-      - name: Generate Release Tag
+          ls -lh *.7z
+
+      - name: Extract Firmware
+        run: |
+          cd releasefiles
+
+          ARCHIVE=$(ls *.7z | head -n1)
+
+          echo "Extracting $ARCHIVE"
+
+          7z x "$ARCHIVE"
+
+      - name: Show Extracted Files
+        run: |
+          cd releasefiles
+
+          find . -type f
+
+      - name: Check For Image
+        run: |
+          cd releasefiles
+
+          IMG=$(find . -name "*.img" | head -n1)
+
+          if [ -z "$IMG" ]; then
+            echo "ERROR: No image found."
+            exit 1
+          fi
+
+          echo "Found image:"
+          echo "$IMG"
+
+      - name: Create Release Tag
         id: tag
         run: |
           echo "tag=Project-$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Publish Project Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
           files: |
-            *.img
+            releasefiles/**/*.img
+            releasefiles/*.img
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
