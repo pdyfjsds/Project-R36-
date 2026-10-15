@@ -1,17 +1,26 @@
-name: Project Extract Test
+name: Project Build
 
 on:
   workflow_dispatch:
+    inputs:
+      package_type:
+        description: "Choose output type"
+        required: true
+        default: "img"
+        type: choice
+        options:
+          - img
+          - update
 
 permissions:
   contents: write
 
 jobs:
-  extract:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install Tools
@@ -20,6 +29,7 @@ jobs:
           sudo apt-get install -y \
             p7zip-full \
             xz-utils \
+            zip \
             gh
 
       - name: Create Downloads Folder
@@ -37,30 +47,26 @@ jobs:
 
       - name: Show Downloaded Files
         run: |
-          echo "Downloaded files:"
+          echo "Downloaded:"
           find downloads -type f
 
-      - name: Verify Required Parts
+      - name: Verify Parts
         run: |
-          ls -lah downloads
-
           test -f downloads/dArkOS4Clone-20261008.img.xz.7z.001
           test -f downloads/dArkOS4Clone-20261008.img.xz.7z.002
           test -f downloads/dArkOS4Clone-20261008.img.xz.7z.003
 
-          echo "All parts found"
-
-      - name: Extract Split 7z Archive
+      - name: Extract Split Archive
         run: |
           cd downloads
 
           7z x dArkOS4Clone-20261008.img.xz.7z.001
 
-      - name: Verify XZ File Exists
+      - name: Verify XZ Exists
         run: |
           find downloads -name "*.xz"
 
-      - name: Extract XZ Archive
+      - name: Extract XZ
         run: |
           cd downloads
 
@@ -70,8 +76,26 @@ jobs:
         run: |
           find downloads -name "*.img"
 
-      - name: Upload Image Artifact
+      - name: Create Update Package
+        if: ${{ inputs.package_type == 'update' }}
+        run: |
+          mkdir update
+
+          cp downloads/*.img update/
+
+          cd update
+
+          zip -r Project-Update.zip .
+
+      - name: Upload IMG Artifact
+        if: ${{ inputs.package_type == 'img' }}
         uses: actions/upload-artifact@v4
         with:
           name: Project-Image
           path: downloads/*.img
+
+      - name: Upload Update Artifact
+        if: ${{ inputs.package_type == 'update' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Project
