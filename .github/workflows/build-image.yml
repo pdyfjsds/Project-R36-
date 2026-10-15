@@ -1,87 +1,25 @@
-name: Project Image Builder
+name: Project Debug
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: WORKFLOW VERSION CHECK
+      - name: Version Check
         run: |
-          echo "========================================="
-          echo "PROJECT WORKFLOW VERSION 7"
-          echo "IF YOU SEE THIS, THE NEW YAML IS RUNNING"
-          echo "========================================="
+          echo "PROJECT WORKFLOW V7"
 
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List Workflow Files
+      - name: List Files
         run: |
-          echo "WORKFLOW FILES:"
-          find .github/workflows -type f || true
-
-      - name: Install Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            p7zip-full \
-            xz-utils \
-            gh
-
-      - name: Create Downloads Folder
-        run: |
-          mkdir -p downloads
-
-      - name: Verify Workspace
-        run: |
-          echo "PWD:"
           pwd
-
-          echo ""
-          echo "FILES:"
           find . -type f
 
-      - name: Download Release Assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: List Workflows
         run: |
-          gh release download 20261008 \
-            --repo lcdyk0517/arkos4clone \
-            --dir downloads
-
-      - name: Show Downloaded Files
-        run: |
-          echo "DOWNLOADED FILES:"
-          find downloads -type f
-
-      - name: Verify Required Parts
-        run: |
-          ls -lah downloads
-
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.001
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.002
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.003
-
-          echo "ALL PARTS FOUND"
-
-      - name: Join Parts
-        run: |
-          cd downloads
-
-          cat \
-            dArkOS4Clone-20261008.img.xz.7z.001 \
-            dArkOS4Clone-20261008.img.xz.7z.002 \
-            dArkOS4Clone-20261008.img.xz.7z.003 \
-            > dArkOS4Clone-20261008.img.xz.7z
-
-          ls -lh
-
-      - name: Test Archive
-      
+          find .github/workflows -type f
