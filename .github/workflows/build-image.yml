@@ -1,0 +1,44 @@
+name: Build Project Image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install 7zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
+      - name: Join Parts
+        run: |
+          cat firmware.img.7z.* > firmware.img.7z
+
+      - name: Extract Image
+        run: |
+          7z x firmware.img.7z
+
+      - name: Generate Release Tag
+        id: tag
+        run: |
+          echo "tag=Project-$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            *.img
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
