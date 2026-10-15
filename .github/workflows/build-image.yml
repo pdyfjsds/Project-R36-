@@ -1,4 +1,4 @@
-name: Build Project Image
+name: Project Image Builder
 
 on:
   workflow_dispatch:
@@ -14,110 +14,62 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Required Packages
+      - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            p7zip-full \
-            gh \
-            wget \
-            curl
+          sudo apt-get install -y p7zip-full xz-utils gh
 
-      - name: Download arkos4clone Release Assets
+      - name: Create Download Directory
+        run: mkdir -p downloads
+
+      - name: Download Release Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir releasefiles
-
           gh release download 20261008 \
             --repo lcdyk0517/arkos4clone \
-            --dir releasefiles
+            --dir downloads
 
-      - name: Display Downloaded Files
+      - name: Show Downloaded Files
         run: |
-          echo "Downloaded files:"
-          find releasefiles -type f
+          find downloads -type f
 
-      - name: Verify Parts Exist
+      - name: Join Split Archive
         run: |
-          cd releasefiles
+          cd downloads
 
-          shopt -s nullglob
+          cat \
+            dArkOS4Clone-20261008.img.xz.7z.001 \
+            dArkOS4Clone-20261008.img.xz.7z.002 \
+            dArkOS4Clone-20261008.img.xz.7z.003 \
+            > dArkOS4Clone-20261008.img.xz.7z
 
-          PARTS=( *.001 )
-
-          if [ ${#PARTS[@]} -eq 0 ]; then
-            echo "ERROR: No .001 files found."
-            exit 1
-          fi
-
-          echo "Found ${#PARTS[@]} part files"
-
-      - name: Join Parts
+      - name: Extract 7z Archive
         run: |
-          cd releasefiles
+          cd downloads
+          7z x dArkOS4Clone-20261008.img.xz.7z
 
-          FIRST=$(ls *.001 | head -n1)
-          BASE=${FIRST%.001}
-
-          echo "Joining parts for $BASE"
-
-          cat "${BASE}.001" \
-              "${BASE}.002" \
-              "${BASE}.003" \
-              > "${BASE}"
-
-          ls -lh
-
-      - name: Verify Combined Archive
+      - name: Extract XZ Archive
         run: |
-          cd releasefiles
+          cd downloads
+          xz -d dArkOS4Clone-20261008.img.xz
 
-          ls -lh *.7z
-
-      - name: Extract Firmware
+      - name: Verify Image
         run: |
-          cd releasefiles
+          find downloads -name "*.img"
 
-          ARCHIVE=$(ls *.7z | head -n1)
-
-          echo "Extracting $ARCHIVE"
-
-          7z x "$ARCHIVE"
-
-      - name: Show Extracted Files
-        run: |
-          cd releasefiles
-
-          find . -type f
-
-      - name: Check For Image
-        run: |
-          cd releasefiles
-
-          IMG=$(find . -name "*.img" | head -n1)
-
-          if [ -z "$IMG" ]; then
-            echo "ERROR: No image found."
-            exit 1
-          fi
-
-          echo "Found image:"
-          echo "$IMG"
-
-      - name: Create Release Tag
+      - name: Generate Tag
         id: tag
         run: |
           echo "tag=Project-$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Publish Project Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
           files: |
-            releasefiles/**/*.img
-            releasefiles/*.img
+            downloads/*.img
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
