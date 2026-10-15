@@ -1,10 +1,10 @@
-name: Project Download Test
+name: Project Extract Test
 
 on:
   workflow_dispatch:
 
 jobs:
-  download:
+  extract:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +14,7 @@ jobs:
       - name: Install Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y gh
+          sudo apt-get install -y p7zip-full xz-utils gh
 
       - name: Create Downloads Folder
         run: |
@@ -30,5 +30,24 @@ jobs:
 
       - name: Show Downloaded Files
         run: |
-          echo "Downloaded files:"
           find downloads -type f
+
+      - name: Extract Split 7z Archive
+        run: |
+          cd downloads
+
+          7z x dArkOS4Clone-20261008.img.xz.7z.001
+
+      - name: Show Files After Extraction
+        run: |
+          find downloads -type f
+
+      - name: Extract XZ
+        run: |
+          cd downloads
+
+          xz -d dArkOS4Clone-20261008.img.xz
+
+      - name: Verify IMG
+        run: |
+          find downloads -name "*.img"
