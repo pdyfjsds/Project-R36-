@@ -3,6 +3,9 @@ name: Project Extract Test
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -14,23 +17,38 @@ jobs:
       - name: Install Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y p7zip-full xz-utils gh
+          sudo apt-get install -y \
+            p7zip-full \
+            xz-utils \
+            gh
 
       - name: Create Downloads Folder
         run: |
           mkdir -p downloads
 
-      - name: Download Release Assets
+      - name: Download dArkOS4Clone Only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download 20261008 \
             --repo lcdyk0517/arkos4clone \
+            --pattern "dArkOS4Clone-20261008.img.xz.7z.*" \
             --dir downloads
 
       - name: Show Downloaded Files
         run: |
+          echo "Downloaded files:"
           find downloads -type f
+
+      - name: Verify Required Parts
+        run: |
+          ls -lah downloads
+
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.001
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.002
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.003
+
+          echo "All parts found"
 
       - name: Extract Split 7z Archive
         run: |
@@ -38,16 +56,22 @@ jobs:
 
           7z x dArkOS4Clone-20261008.img.xz.7z.001
 
-      - name: Show Files After Extraction
+      - name: Verify XZ File Exists
         run: |
-          find downloads -type f
+          find downloads -name "*.xz"
 
-      - name: Extract XZ
+      - name: Extract XZ Archive
         run: |
           cd downloads
 
           xz -d dArkOS4Clone-20261008.img.xz
 
-      - name: Verify IMG
+      - name: Verify IMG Exists
         run: |
           find downloads -name "*.img"
+
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Project-Image
+          path: downloads/*.img
