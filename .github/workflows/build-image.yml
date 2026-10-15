@@ -12,8 +12,20 @@ jobs:
 
     steps:
 
+      - name: WORKFLOW VERSION CHECK
+        run: |
+          echo "========================================="
+          echo "PROJECT WORKFLOW VERSION 7"
+          echo "IF YOU SEE THIS, THE NEW YAML IS RUNNING"
+          echo "========================================="
+
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: List Workflow Files
+        run: |
+          echo "WORKFLOW FILES:"
+          find .github/workflows -type f || true
 
       - name: Install Tools
         run: |
@@ -29,11 +41,11 @@ jobs:
 
       - name: Verify Workspace
         run: |
-          echo "Current Directory:"
+          echo "PWD:"
           pwd
 
           echo ""
-          echo "Repository Files:"
+          echo "FILES:"
           find . -type f
 
       - name: Download Release Assets
@@ -46,20 +58,18 @@ jobs:
 
       - name: Show Downloaded Files
         run: |
-          echo "Downloaded Assets:"
+          echo "DOWNLOADED FILES:"
           find downloads -type f
 
       - name: Verify Required Parts
         run: |
-          cd downloads
+          ls -lah downloads
 
-          ls -lah
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.001
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.002
+          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.003
 
-          test -f dArkOS4Clone-20261008.img.xz.7z.001
-          test -f dArkOS4Clone-20261008.img.xz.7z.002
-          test -f dArkOS4Clone-20261008.img.xz.7z.003
-
-          echo "All 3 parts found."
+          echo "ALL PARTS FOUND"
 
       - name: Join Parts
         run: |
@@ -67,3 +77,11 @@ jobs:
 
           cat \
             dArkOS4Clone-20261008.img.xz.7z.001 \
+            dArkOS4Clone-20261008.img.xz.7z.002 \
+            dArkOS4Clone-20261008.img.xz.7z.003 \
+            > dArkOS4Clone-20261008.img.xz.7z
+
+          ls -lh
+
+      - name: Test Archive
+      
