@@ -20,6 +20,6 @@ jobs:
           pwd
           find . -type f
 
-      - name: List Workflows
+      - name: Done
         run: |
-          find .github/workflows -type f
+          echo "Success"
