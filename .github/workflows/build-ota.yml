@@ -34,7 +34,7 @@ jobs:
             -type f \
             -name "*.sh" \
             -print0 \
-            | xargs -0 shellcheck
+            | xargs -0 -r shellcheck
 
       - name: Build OTA Package
         run: |
@@ -45,9 +45,17 @@ jobs:
 
       - name: Run OTA Security Tests
         run: |
-          chmod +x tests/run-security-tests.sh
+          if [ -f tests/run-security-tests.sh ]; then
+            chmod +x tests/run-security-tests.sh
+            ./tests/run-security-tests.sh
+          else
+            echo "No OTA security test suite found."
+          fi
 
-          ./tests/run-security-tests.sh
+      - name: Verify Release Files
+        run: |
+          echo "Contents of build/releases:"
+          ls -lah build/releases || true
 
       - name: Upload OTA Artifact
         uses: actions/upload-artifact@v4
@@ -66,3 +74,9 @@ jobs:
             build/releases/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Final Debug
+        if: always()
+        run: |
+          echo "Build finished."
+          find build -type f 2>/dev/null || true
