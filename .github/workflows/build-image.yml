@@ -1,42 +1,39 @@
-name: Project Build
+name: Build Project Installation Image
 
 on:
   workflow_dispatch:
     inputs:
-      package_type:
-        description: "Choose output type"
+      version:
+        description: "Project Version"
         required: true
-        default: "img"
-        type: choice
-        options:
-          - img
-          - update
+        default: "0.2.0"
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-image:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+
+      - name: Checkout Project
         uses: actions/checkout@v4
 
-      - name: Install Tools
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             p7zip-full \
             xz-utils \
-            zip \
             gh
 
-      - name: Create Downloads Folder
+      - name: Create Working Directories
         run: |
           mkdir -p downloads
+          mkdir -p output
 
-      - name: Download dArkOS4Clone Only
+      - name: Download Base Firmware
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -45,57 +42,24 @@ jobs:
             --pattern "dArkOS4Clone-20261008.img.xz.7z.*" \
             --dir downloads
 
-      - name: Show Downloaded Files
-        run: |
-          echo "Downloaded:"
-          find downloads -type f
-
-      - name: Verify Parts
-        run: |
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.001
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.002
-          test -f downloads/dArkOS4Clone-20261008.img.xz.7z.003
-
       - name: Extract Split Archive
         run: |
           cd downloads
 
-          7z x dArkOS4Clone-20261008.img.xz.7z.001
+          7z x \
+            dArkOS4Clone-20261008.img.xz.7z.001
 
-      - name: Verify XZ Exists
-        run: |
-          find downloads -name "*.xz"
-
-      - name: Extract XZ
+      - name: Extract Image
         run: |
           cd downloads
 
-          xz -d dArkOS4Clone-20261008.img.xz
+          xz -d \
+            dArkOS4Clone-20261008.img.xz
 
-      - name: Verify IMG Exists
+      - name: Rename Image
         run: |
-          find downloads -name "*.img"
+          cd downloads
 
-      - name: Create Update Package
-        if: ${{ inputs.package_type == 'update' }}
-        run: |
-          mkdir update
-
-          cp downloads/*.img update/
-
-          cd update
-
-          zip -r Project-Update.zip .
-
-      - name: Upload IMG Artifact
-        if: ${{ inputs.package_type == 'img' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: Project-Image
-          path: downloads/*.img
-
-      - name: Upload Update Artifact
-        if: ${{ inputs.package_type == 'update' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: Project
+          mv \
+            dArkOS4Clone-20261008.img \
+            Project
